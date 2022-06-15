@@ -41,7 +41,8 @@ find_package(GTest REQUIRED)
 add_executable(filediff main.cpp)
 
 # ==> Target for testing with GoogleTest
-add_executable(tests tests/ut.cpp)
+add_executable(tests tests/ut.cpp
+                     adler32.cpp)
 
 target_link_libraries(tests GTest::GTest)
 
