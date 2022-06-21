@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.5)
 #----------------------------------------------#
 project(filediff LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ============= Conan Bootstrap =============================#
@@ -42,7 +42,8 @@ add_executable(filediff main.cpp)
 
 # ==> Target for testing with GoogleTest
 add_executable(tests tests/ut.cpp
-                     adler32.cpp)
+                     adler32.cpp
+                     signature.cpp)
 
 target_link_libraries(tests GTest::GTest)
 
