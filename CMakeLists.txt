@@ -17,11 +17,15 @@ set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR} ${CMAKE_PREFIX_PATH})
 #========== Find Packages =====================#
 
 find_package(GTest REQUIRED)
+find_package(Boost REQUIRED)
 
 #========== Targets Configurations ============#
 # ==> Main target
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME} main.cpp
+                               adler32.cpp
+                               signature.cpp)
 
+target_link_libraries(${PROJECT_NAME} Boost::program_options)
 
 # ==> Target for testing with GoogleTest
 add_executable(tests tests/ut.cpp

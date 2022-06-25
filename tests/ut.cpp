@@ -32,14 +32,16 @@ class SignatureBasicTestSuite : public ::testing::Test {
 
 TEST(SignatureBasicTestSuite, FileNotFoundTest) {
     EXPECT_THROW({
-                     try {
-                         const std::string path{"not_existing_file.txt"};
-                         filediff::Signature signature(path, filediff::Signature::InputFileType::BASIS);
-                     } catch(std::runtime_error& e) {
-                         EXPECT_STREQ("File not found!", e.what());
-                         throw;
-                     }
-                 }, std::runtime_error);
+        const std::string fileName { "not_existing_file.txt" };
+        try {
+            filediff::Signature signature(fileName, filediff::Signature::InputFileType::BASIS);
+        } catch (std::runtime_error& e) {
+            const std::string expectedErrorMessage { "File " + fileName + " not found!" };
+            EXPECT_STREQ(expectedErrorMessage.c_str(), e.what());
+            throw;
+        }
+    },
+        std::runtime_error);
 }
 
 TEST(SignatureBasicTestSuite, SingleWordCalculationTest) {

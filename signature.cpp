@@ -2,7 +2,6 @@
 #include "adler32.h"
 
 #include <fstream>
-#include <iostream>
 #include <stdexcept>
 
 filediff::Signature::Signature(const std::string& path, InputFileType fileType)
@@ -10,7 +9,7 @@ filediff::Signature::Signature(const std::string& path, InputFileType fileType)
     if(fileType == InputFileType::SIGNATURE) {
         std::ifstream isf{path, std::ios::binary};
         if(!isf.is_open()) {
-            throw std::runtime_error("File not found!");
+            throw std::runtime_error("File " + path + " not found!");
         }
 
         isf.read(reinterpret_cast<char*>(&m_metadata), sizeof(decltype (m_metadata)));
@@ -28,7 +27,7 @@ filediff::Signature::Signature(const std::string& path, InputFileType fileType)
     } else {
         std::ifstream isf{path};
         if(!isf.is_open()) {
-            throw std::runtime_error("File not found!");
+            throw std::runtime_error("File " + path + " not found!");
         }
 
         std::string line;
@@ -51,8 +50,8 @@ const filediff::Signature::Metadata& filediff::Signature::GetMetadata() const no
 
 void filediff::Signature::Serialize(std::ostream& out) const
 {
-    out.write(reinterpret_cast<const char*>(&m_metadata), sizeof (decltype (m_metadata)));
+    out.write(reinterpret_cast<const char*>(&m_metadata), sizeof(decltype(m_metadata)));
     for(auto elem : m_hashes) {
-        out.write(reinterpret_cast<char*>(&elem), sizeof (decltype (elem)));
+        out.write(reinterpret_cast<char*>(&elem), sizeof(decltype(elem)));
     }
 }
