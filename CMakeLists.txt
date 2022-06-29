@@ -23,14 +23,16 @@ find_package(Boost REQUIRED)
 # ==> Main target
 add_executable(${PROJECT_NAME} main.cpp
                                adler32.cpp
-                               signature.cpp)
+                               signature.cpp
+                               delta.cpp)
 
 target_link_libraries(${PROJECT_NAME} Boost::program_options)
 
 # ==> Target for testing with GoogleTest
 add_executable(tests tests/ut.cpp
                      adler32.cpp
-                     signature.cpp)
+                     signature.cpp
+                     delta.cpp)
 
 target_link_libraries(tests gtest::gtest)
 
