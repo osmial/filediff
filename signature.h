@@ -23,11 +23,14 @@ public:
     // ctor taking path to signature file
     Signature(const std::string& fileName, InputFileType fileType);
 
-    const std::deque<uint32_t>& GetHashes() const noexcept; //not sure if this should be a part of public API but it's usefull for testing now, decide later
-    const Metadata& GetMetadata() const noexcept; //same here, review later
+    const std::deque<uint32_t>& GetHashes() const noexcept;
 
     // save calculations + metadata to signature file
     void Serialize(std::ostream& out) const;
+
+protected:
+    const Metadata& GetMetadata() const noexcept;
+
 private:
     const std::string m_fileName;
     std::deque<uint32_t> m_hashes;
