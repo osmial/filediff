@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <fstream>
 #include <limits>
+#include <map>
 
 #include "adler32.h"
 #include "delta.h"
@@ -33,6 +34,13 @@ filediff::Delta::Delta(const std::string& sigFileName, const std::string& dataFi
 {
 }
 
+auto findMatchingHash(auto itBegin, auto itEnd, uint32_t hash)
+{
+    return std::find_if(itBegin, itEnd, [hash](const auto& pair) {
+        return pair.hash == hash;
+    });
+}
+
 void filediff::Delta::Calculate()
 {
     std::ifstream ifs { m_dataFile };
@@ -40,41 +48,42 @@ void filediff::Delta::Calculate()
         throw std::runtime_error("File " + m_dataFile + " not found!");
     }
 
-    // parse data file //
     auto updatedFileMetadata = ParseDataFile(ifs);
-
-    // diff detection logic
-    auto newElementsCntr { 0U };
-    auto elementsMovedCntr { 0U };
     auto oldHashes { m_baseSignature.GetHashes() };
+    auto lineToBeParsedMarker = std::cbegin(updatedFileMetadata);
+    std::vector<decltype(updatedFileMetadata)::const_iterator> matchingRangeMarkers;
+    auto it = std::cbegin(updatedFileMetadata);
 
-    std::unordered_map<uint32_t, uint32_t> oldHashesIndexes;
-    for (auto it = std::cbegin(oldHashes); it != std::cend(oldHashes); ++it) {
-        oldHashesIndexes.emplace(*it, std::distance(std::cbegin(oldHashes), it));
-    }
+    auto insertingLambda = [&ifs](const auto& elem) { return std::make_pair(elem.hash, ReadLine(ifs, elem.linePos)); };
 
-    auto elemIt = std::cbegin(updatedFileMetadata);
-    while (elemIt != std::cend(updatedFileMetadata)) {
-        if (auto it = std::find(std::cbegin(oldHashes), std::cend(oldHashes), elemIt->hash); it == std::cend(oldHashes)) {
-            // hash not found, new or updated chunk
-            m_delta.emplace_back(elemIt->hash, ReadLine(ifs, elemIt->linePos));
-            newElementsCntr++;
-        } else {
-            // hash found, but it might be moved around the file, check against that
-            auto oldHashIndex = oldHashesIndexes[*it];
-            auto currentHashIndex = std::distance(std::cbegin(updatedFileMetadata), elemIt) - newElementsCntr - elementsMovedCntr;
-            if (oldHashIndex != currentHashIndex) {
-                // element moved around the file
-                m_delta.emplace_back(elemIt->hash, ReadLine(ifs, elemIt->linePos));
-                elementsMovedCntr++;
-            }
-            oldHashes.erase(it);
+    for (auto i = 0U; i < oldHashes.size(); ++i) {
+        auto keepIt = it;
+        it = findMatchingHash(it, std::cend(updatedFileMetadata), oldHashes[i]);
+
+        if (it == std::cend(updatedFileMetadata)) {
+            // chunk not found in new version of the file is considered as removed
+            m_delta.emplace_back(oldHashes[i], "");
+            it = keepIt;
+            continue;
         }
-        elemIt++;
-    }
 
-    std::transform(std::cbegin(oldHashes), std::cend(oldHashes), std::back_inserter(m_delta), [](auto& hash) { return std::make_pair(hash, ""); });
-    ifs.close();
+        matchingRangeMarkers.emplace_back(it);
+        it++; // we don't want to fell into any weird loop in case of having few the same entries in a row
+
+        if (matchingRangeMarkers.size() == 1) {
+            // insert new elements prefacing matching chunks
+            std::transform(lineToBeParsedMarker, matchingRangeMarkers[0], std::back_inserter(m_delta), insertingLambda);
+            lineToBeParsedMarker = std::next(matchingRangeMarkers[0]);
+        } else if (matchingRangeMarkers.size() == 2) {
+            // insert new elements from matching chunks "block"
+            std::transform(std::next(matchingRangeMarkers[0]), matchingRangeMarkers[1], std::back_inserter(m_delta),
+                insertingLambda);
+            lineToBeParsedMarker = std::next(matchingRangeMarkers[1]);
+            matchingRangeMarkers.clear();
+        }
+    }
+    // insert all remaining chunks not matching old hashes
+    std::transform(lineToBeParsedMarker, std::cend(updatedFileMetadata), std::back_inserter(m_delta), insertingLambda);
 }
 
 bool filediff::Delta::IsChanged() const noexcept

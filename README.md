@@ -8,5 +8,3 @@ signature calculation:
 
 delta printing:
 ./filediff --delta --sigfile A.sig --newdata A
-
-NOTE: during the testing it was found that recent changes have broken delta calculation when it comes to detecting shifted chunks, there are appropriate unit tests (disabled) that reproduces the issue.

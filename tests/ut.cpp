@@ -171,8 +171,6 @@ TEST_F(DeltaTestSuite, SameFileNoChangeTest)
     EXPECT_FALSE(delta.IsChanged());
 }
 
-// TODO: this unit test would fail after changing chunk size to something else than one line, it should be probably good
-//  to consider changing the impl to make those parametrized where passed params would set expectations, might be easier to maintain
 TEST_F(DeltaTestSuite, LineAddedOnFileBeginningTest)
 {
     PrepareDataTestFile({ WIKIPEDIA_STR });
@@ -254,17 +252,16 @@ TEST_F(DeltaTestSuite, OneLineShiftedTest)
     EXPECT_TRUE(delta.IsChanged());
 
     const auto& rawDelta { delta.GetRawDelta() };
-    constexpr auto EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA { 1 };
+    constexpr auto EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA { 2 };
     ASSERT_EQ(EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA, rawDelta.size());
 
     // verify if lines have been moved within the file //
-    const auto it { rawDelta.cbegin() };
-    EXPECT_EQ(LOREM_IPSUM_HASH, it->first);
-    EXPECT_EQ(LOREM_IPSUM_STR, it->second);
+    EXPECT_EQ(LOREM_IPSUM_HASH, rawDelta[0].first); // moved
+    EXPECT_EQ(LOREM_IPSUM_STR, rawDelta[0].second);
+    EXPECT_EQ(LOREM_IPSUM_HASH, rawDelta[1].first); // removed
 }
 
-// TODO: ok, let's face the true, I've broken shift detection algorithm since list time and it needs to be fixed/rewritten
-TEST_F(DeltaTestSuite, DISABLED_OneLineShiftedInMultilineFileTest)
+TEST_F(DeltaTestSuite, OneLineShiftedInMultilineFileTest)
 {
     PrepareDataTestFile({ WIKIPEDIA_STR, LOREM_IPSUM_STR, SOME_TEXT_STR, YET_ANOTHER_TEXT_STR });
     PrepareSigTestFile({ WIKIPEDIA_HASH, LOREM_IPSUM_HASH, SOME_TEXT_HASH, YET_ANOTHER_TEXT_HASH });
@@ -276,16 +273,16 @@ TEST_F(DeltaTestSuite, DISABLED_OneLineShiftedInMultilineFileTest)
     EXPECT_TRUE(delta.IsChanged());
 
     const auto& rawDelta { delta.GetRawDelta() };
-    constexpr auto EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA { 1 };
+    constexpr auto EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA { 2 };
     ASSERT_EQ(EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA, rawDelta.size());
 
     // verify if lines have been moved within the file //
-    const auto it { rawDelta.cbegin() };
-    EXPECT_EQ(SOME_TEXT_HASH, it->first);
-    EXPECT_EQ(SOME_TEXT_STR, it->second);
+    EXPECT_EQ(SOME_TEXT_HASH, rawDelta[0].first); // moved
+    EXPECT_EQ(SOME_TEXT_STR, rawDelta[0].second);
+    EXPECT_EQ(SOME_TEXT_HASH, rawDelta[1].first); // removed
 }
 
-TEST_F(DeltaTestSuite, DISABLED_LineAddedAndMultipleLinesShiftedTest)
+TEST_F(DeltaTestSuite, LineAddedAndMultipleLinesShiftedTest)
 {
     PrepareDataTestFile({ WIKIPEDIA_STR, SOME_TEXT_STR, LOREM_IPSUM_STR });
     PrepareSigTestFile({ WIKIPEDIA_HASH, SOME_TEXT_HASH, LOREM_IPSUM_HASH });
@@ -297,11 +294,12 @@ TEST_F(DeltaTestSuite, DISABLED_LineAddedAndMultipleLinesShiftedTest)
     EXPECT_TRUE(delta.IsChanged());
 
     const auto& rawDelta { delta.GetRawDelta() };
-    const std::array<std::pair<std::uint32_t, std::string>, 4> EXPECTED_DELTA_COLLECTION {
+    const std::array<std::pair<std::uint32_t, std::string>, 5> EXPECTED_DELTA_COLLECTION {
         std::make_pair(YET_ANOTHER_TEXT_HASH, YET_ANOTHER_TEXT_STR),
+        std::make_pair(LOREM_IPSUM_HASH, LOREM_IPSUM_STR),
         std::make_pair(SOME_TEXT_HASH, SOME_TEXT_STR),
-        std::make_pair(WIKIPEDIA_HASH, WIKIPEDIA_STR),
-        std::make_pair(LOREM_IPSUM_HASH, LOREM_IPSUM_STR)
+        std::make_pair(SOME_TEXT_HASH, ""),
+        std::make_pair(LOREM_IPSUM_HASH, "")
     };
     constexpr auto EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA { EXPECTED_DELTA_COLLECTION.size() };
     ASSERT_EQ(EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA, rawDelta.size());
@@ -311,8 +309,27 @@ TEST_F(DeltaTestSuite, DISABLED_LineAddedAndMultipleLinesShiftedTest)
         EXPECT_EQ(EXPECTED_DELTA_COLLECTION[i].first, rawDelta[i].first);
         EXPECT_EQ(EXPECTED_DELTA_COLLECTION[i].second, rawDelta[i].second);
     }
-    // This test fails cause always last shifted element is being discarded due to shift detection algorithm limmitation.
-    // To have it covered properly more sophisticated approach should be taken cause now if line is being moved
-    // all original elements before or after that change are affected and with current approach only shift is detected.
 }
+
+TEST_F(DeltaTestSuite, LineRemovedTest)
+{
+    PrepareDataTestFile({ WIKIPEDIA_STR, WIKIPEDIA_STR, SOME_TEXT_STR, LOREM_IPSUM_STR, LOREM_IPSUM_STR });
+    PrepareSigTestFile({ WIKIPEDIA_HASH, WIKIPEDIA_HASH, SOME_TEXT_HASH, LOREM_IPSUM_HASH, LOREM_IPSUM_HASH });
+    // update data test file //
+    PrepareDataTestFile({ WIKIPEDIA_STR, WIKIPEDIA_STR, LOREM_IPSUM_STR, LOREM_IPSUM_STR });
+
+    DeltaTesting delta { m_signatureTestFile, m_dataTestFile };
+    delta.Calculate();
+    EXPECT_TRUE(delta.IsChanged());
+
+    const auto& rawDelta { delta.GetRawDelta() };
+
+    constexpr auto EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA { 1 };
+    ASSERT_EQ(EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA, rawDelta.size());
+
+    // verify if line was removed from the file //
+    EXPECT_EQ(SOME_TEXT_HASH, rawDelta[0].first);
+    EXPECT_EQ("", rawDelta[0].second);
+}
+
 } // testing namespace
