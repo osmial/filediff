@@ -2,7 +2,7 @@
 
 constexpr uint32_t MOD_ADLER = 65521;
 
-uint32_t adler32(std::string data)
+uint32_t adler32(std::string_view data)
 {
     auto a = 1, b = 0;
     for (auto elem : data) {

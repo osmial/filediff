@@ -1,15 +1,17 @@
-#include "signature.h"
-#include "adler32.h"
-
 #include <fstream>
 #include <stdexcept>
 
-filediff::Signature::Signature(const std::string& path, InputFileType fileType)
+#include <fmt/core.h>
+
+#include "adler32.h"
+#include "signature.h"
+
+filediff::Signature::Signature(std::string_view path, InputFileType fileType)
 {
     if(fileType == InputFileType::SIGNATURE) {
-        std::ifstream isf{path, std::ios::binary};
+        std::ifstream isf { path.data(), std::ios::binary };
         if(!isf.is_open()) {
-            throw std::runtime_error("File " + path + " not found!");
+            throw std::runtime_error(std::string { fmt::format("File {} not found!", path) });
         }
 
         isf.read(reinterpret_cast<char*>(&m_metadata), sizeof(decltype (m_metadata)));
@@ -25,9 +27,9 @@ filediff::Signature::Signature(const std::string& path, InputFileType fileType)
             m_hashes.emplace_back(hash);
         }
     } else {
-        std::ifstream isf{path};
+        std::ifstream isf { path.data() };
         if(!isf.is_open()) {
-            throw std::runtime_error("File " + path + " not found!");
+            throw std::runtime_error(fmt::format("File {} not found!", path));
         }
 
         std::string line;

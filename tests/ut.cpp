@@ -1,8 +1,10 @@
 #include <array>
 #include <fstream>
-#include <gtest/gtest.h>
 #include <iostream>
 #include <utility>
+
+#include <fmt/core.h>
+#include <gtest/gtest.h>
 
 #include "../adler32.h"
 #include "../delta.h"
@@ -35,7 +37,7 @@ TEST(adler32TestSuite, LoremIpsumTest)
 
 class SignatureTesting : public filediff::Signature {
 public:
-    SignatureTesting(const std::string& fileName, InputFileType fileType)
+    SignatureTesting(std::string_view fileName, InputFileType fileType)
         : Signature(fileName, fileType)
     {
     }
@@ -48,11 +50,11 @@ class SignatureBasicTestSuite : public ::testing::Test {
 
 TEST(SignatureBasicTestSuite, FileNotFoundTest) {
     EXPECT_THROW({
-        const std::string fileName { "not_existing_file.txt" };
+        std::string_view fileName { "not_existing_file.txt" };
         try {
             SignatureTesting signature(fileName, filediff::Signature::InputFileType::BASIS);
         } catch (std::runtime_error& e) {
-            const std::string expectedErrorMessage { "File " + fileName + " not found!" };
+            const std::string expectedErrorMessage { fmt::format("File {} not found!", fileName) };
             EXPECT_STREQ(expectedErrorMessage.c_str(), e.what());
             throw;
         }
@@ -100,7 +102,7 @@ struct TestingBase {
 
     void PrepareDataTestFile(const std::vector<std::string>& lines)
     {
-        std::ofstream ofs { m_dataTestFile };
+        std::ofstream ofs { m_dataTestFile.data() };
         for (const auto& line : lines) {
             ofs << line << "\n";
         }
@@ -117,15 +119,15 @@ struct TestingBase {
             hashes.pop_front();
         }
 
-        std::ofstream ofSigStream { m_signatureTestFile, std::ios::binary };
+        std::ofstream ofSigStream { m_signatureTestFile.data(), std::ios::binary };
         if (ofSigStream.is_open()) {
             signature.Serialize(ofSigStream);
             ofSigStream.close();
         }
     }
 
-    const std::string m_dataTestFile { "test.txt" };
-    const std::string m_signatureTestFile { "test.txt.sig" };
+    std::string_view m_dataTestFile { "test.txt" };
+    std::string_view m_signatureTestFile { "test.txt.sig" };
 };
 
 class SignatureCalculationTestSuite : public TestingBase, public ::testing::TestWithParam<std::pair<std::string, uint32_t>> {
@@ -151,7 +153,7 @@ class DeltaTestSuite : public TestingBase, public ::testing::Test {
 public:
     class DeltaTesting : public filediff::Delta {
     public:
-        DeltaTesting(const std::string& sigFileName, const std::string& dataFile)
+        DeltaTesting(std::string_view sigFileName, std::string_view dataFile)
             : Delta(sigFileName, dataFile)
         {
         }

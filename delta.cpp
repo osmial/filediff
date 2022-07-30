@@ -3,6 +3,8 @@
 #include <limits>
 #include <map>
 
+#include <fmt/core.h>
+
 #include "adler32.h"
 #include "delta.h"
 
@@ -28,8 +30,8 @@ static auto ReadLine(std::ifstream& ifs, auto lineNumber)
     return line;
 }
 
-filediff::Delta::Delta(const std::string& sigFileName, const std::string& dataFile)
-    : m_dataFile { dataFile }
+filediff::Delta::Delta(std::string_view sigFileName, std::string_view dataFileName)
+    : m_dataFileName { dataFileName }
     , m_baseSignature { sigFileName, filediff::Signature::InputFileType::SIGNATURE }
 {
 }
@@ -43,9 +45,9 @@ auto findMatchingHash(auto itBegin, auto itEnd, uint32_t hash)
 
 void filediff::Delta::Calculate()
 {
-    std::ifstream ifs { m_dataFile };
+    std::ifstream ifs { m_dataFileName.data() };
     if (!ifs.is_open()) {
-        throw std::runtime_error("File " + m_dataFile + " not found!");
+        throw std::runtime_error(fmt::format("File {} not found!", m_dataFileName));
     }
 
     auto updatedFileMetadata = ParseDataFile(ifs);

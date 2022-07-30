@@ -18,6 +18,7 @@ set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR} ${CMAKE_PREFIX_PATH})
 
 find_package(GTest REQUIRED)
 find_package(Boost REQUIRED)
+find_package(fmt REQUIRED)
 
 #========== Targets Configurations ============#
 # ==> Main target
@@ -26,7 +27,9 @@ add_executable(${PROJECT_NAME} main.cpp
                                signature.cpp
                                delta.cpp)
 
-target_link_libraries(${PROJECT_NAME} Boost::program_options)
+target_link_libraries(${PROJECT_NAME} Boost::program_options
+                                      fmt::fmt)
+
 
 # ==> Target for testing with GoogleTest
 add_executable(tests tests/ut.cpp
@@ -34,6 +37,7 @@ add_executable(tests tests/ut.cpp
                      signature.cpp
                      delta.cpp)
 
-target_link_libraries(tests gtest::gtest)
+target_link_libraries(tests gtest::gtest
+                            fmt::fmt)
 
 add_test(UnitTests tests)

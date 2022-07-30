@@ -1,9 +1,9 @@
 #ifndef SIGNATURE_H
 #define SIGNATURE_H
 
-#include <string>
 #include <deque>
 #include <sstream>
+#include <string_view>
 
 namespace filediff {
 
@@ -21,7 +21,7 @@ public:
     };
 
     // ctor taking path to signature file
-    Signature(const std::string& fileName, InputFileType fileType);
+    Signature(std::string_view fileName, InputFileType fileType);
 
     const std::deque<uint32_t>& GetHashes() const noexcept;
 
@@ -32,7 +32,6 @@ protected:
     const Metadata& GetMetadata() const noexcept;
 
 private:
-    const std::string m_fileName;
     std::deque<uint32_t> m_hashes;
     Metadata m_metadata;
 };

@@ -2,6 +2,7 @@
 #define DELTA_HPP
 
 #include <deque>
+#include <string_view>
 #include <utility>
 
 #include "signature.h"
@@ -11,7 +12,7 @@ namespace filediff {
 class Delta
 {
 public:
-    Delta(const std::string& sigFileName, const std::string& dataFile);
+    Delta(std::string_view sigFileName, std::string_view dataFileName);
 
     void Calculate();
 
@@ -30,7 +31,8 @@ private:
 
     std::deque<LineMetadata> ParseDataFile(std::ifstream& ifs);
 
-    const std::string m_dataFile;
+    std::string_view
+        m_dataFileName; // this might be suspicious but the lifetime of orginal string is enough to not end up with dangling pointers.
     Signature m_baseSignature;
     std::deque<uint32_t> m_newHashes;
     std::deque<std::pair<uint32_t, std::string>> m_delta;
