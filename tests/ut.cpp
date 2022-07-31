@@ -48,7 +48,8 @@ public:
 class SignatureBasicTestSuite : public ::testing::Test {
 };
 
-TEST(SignatureBasicTestSuite, FileNotFoundTest) {
+TEST(SignatureBasicTestSuite, FileNotFoundTest)
+{
     EXPECT_THROW({
         std::string_view fileName { "not_existing_file.txt" };
         try {
@@ -62,21 +63,23 @@ TEST(SignatureBasicTestSuite, FileNotFoundTest) {
         std::runtime_error);
 }
 
-TEST(SignatureBasicTestSuite, SingleWordCalculationTest) {
-    const std::string testFile{"test.txt"};
-    std::ofstream ofs{testFile};
+TEST(SignatureBasicTestSuite, SingleWordCalculationTest)
+{
+    const std::string testFile { "test.txt" };
+    std::ofstream ofs { testFile };
     ofs << WIKIPEDIA_STR;
     ofs.close();
 
     SignatureTesting signature { testFile, filediff::Signature::InputFileType::BASIS };
-    auto hashes{signature.GetHashes()};
+    auto hashes { signature.GetHashes() };
     EXPECT_EQ(1, hashes.size());
     EXPECT_EQ(WIKIPEDIA_HASH, hashes[0]);
 }
 
-TEST(SignatureBasicTestSuite, SerializeTest) {
-    const std::string testFile{"test.txt"};
-    std::ofstream ofs{testFile};
+TEST(SignatureBasicTestSuite, SerializeTest)
+{
+    const std::string testFile { "test.txt" };
+    std::ofstream ofs { testFile };
     ofs << LOREM_IPSUM_STR;
     ofs.close();
 
@@ -85,9 +88,9 @@ TEST(SignatureBasicTestSuite, SerializeTest) {
     signature.Serialize(ss);
     ss.seekp(0);
     filediff::Signature::Metadata metadata;
-    ss.read(reinterpret_cast<char*>(&metadata), sizeof (decltype (metadata)));
+    ss.read(reinterpret_cast<char*>(&metadata), sizeof(decltype(metadata)));
     uint32_t hash;
-    ss.read(reinterpret_cast<char*>(&hash), sizeof (uint32_t));
+    ss.read(reinterpret_cast<char*>(&hash), sizeof(uint32_t));
     EXPECT_EQ(1, metadata.m_numberOfChunks);
     EXPECT_EQ(1, metadata.m_chunkLenght);
     EXPECT_EQ(LOREM_IPSUM_HASH, hash);
@@ -133,11 +136,12 @@ struct TestingBase {
 class SignatureCalculationTestSuite : public TestingBase, public ::testing::TestWithParam<std::pair<std::string, uint32_t>> {
 };
 
-TEST_P(SignatureCalculationTestSuite, SignatureFileReadWriteSimpleTest) {
-    auto params{GetParam()};
+TEST_P(SignatureCalculationTestSuite, SignatureFileReadWriteSimpleTest)
+{
+    auto params { GetParam() };
     PrepareTestFiles(params.first, params.second);
 
-    //test begins//
+    // test begins//
     SignatureTesting testSig { m_signatureTestFile, filediff::Signature::InputFileType::SIGNATURE };
     EXPECT_EQ(1, testSig.GetMetadata().m_numberOfChunks);
     EXPECT_EQ(1, testSig.GetMetadata().m_chunkLenght);
@@ -258,9 +262,10 @@ TEST_F(DeltaTestSuite, OneLineShiftedTest)
     ASSERT_EQ(EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA, rawDelta.size());
 
     // verify if lines have been moved within the file //
-    EXPECT_EQ(LOREM_IPSUM_HASH, rawDelta[0].first); // moved
-    EXPECT_EQ(LOREM_IPSUM_STR, rawDelta[0].second);
-    EXPECT_EQ(LOREM_IPSUM_HASH, rawDelta[1].first); // removed
+    EXPECT_EQ(WIKIPEDIA_HASH, rawDelta[0].first); // removed
+    EXPECT_EQ("", rawDelta[0].second);
+    EXPECT_EQ(WIKIPEDIA_HASH, rawDelta[1].first); // moved
+    EXPECT_EQ(WIKIPEDIA_STR, rawDelta[1].second);
 }
 
 TEST_F(DeltaTestSuite, OneLineShiftedInMultilineFileTest)
@@ -297,11 +302,11 @@ TEST_F(DeltaTestSuite, LineAddedAndMultipleLinesShiftedTest)
 
     const auto& rawDelta { delta.GetRawDelta() };
     const std::array<std::pair<std::uint32_t, std::string>, 5> EXPECTED_DELTA_COLLECTION {
-        std::make_pair(YET_ANOTHER_TEXT_HASH, YET_ANOTHER_TEXT_STR),
-        std::make_pair(LOREM_IPSUM_HASH, LOREM_IPSUM_STR),
-        std::make_pair(SOME_TEXT_HASH, SOME_TEXT_STR),
+        std::make_pair(WIKIPEDIA_HASH, ""),
         std::make_pair(SOME_TEXT_HASH, ""),
-        std::make_pair(LOREM_IPSUM_HASH, "")
+        std::make_pair(YET_ANOTHER_TEXT_HASH, YET_ANOTHER_TEXT_STR),
+        std::make_pair(SOME_TEXT_HASH, SOME_TEXT_STR),
+        std::make_pair(WIKIPEDIA_HASH, WIKIPEDIA_STR)
     };
     constexpr auto EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA { EXPECTED_DELTA_COLLECTION.size() };
     ASSERT_EQ(EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA, rawDelta.size());
@@ -332,6 +337,54 @@ TEST_F(DeltaTestSuite, LineRemovedTest)
     // verify if line was removed from the file //
     EXPECT_EQ(SOME_TEXT_HASH, rawDelta[0].first);
     EXPECT_EQ("", rawDelta[0].second);
+}
+
+TEST_F(DeltaTestSuite, RepeatingLineRemovedTest)
+{
+    PrepareDataTestFile({ WIKIPEDIA_STR, SOME_TEXT_STR, LOREM_IPSUM_STR, WIKIPEDIA_STR, YET_ANOTHER_TEXT_STR });
+    PrepareSigTestFile({ WIKIPEDIA_HASH, SOME_TEXT_HASH, LOREM_IPSUM_HASH, WIKIPEDIA_HASH, YET_ANOTHER_TEXT_HASH });
+    // update data test file //
+    PrepareDataTestFile({ SOME_TEXT_STR, LOREM_IPSUM_STR, WIKIPEDIA_STR, YET_ANOTHER_TEXT_STR });
+
+    DeltaTesting delta { m_signatureTestFile, m_dataTestFile };
+    delta.Calculate();
+    EXPECT_TRUE(delta.IsChanged());
+
+    const auto& rawDelta { delta.GetRawDelta() };
+
+    constexpr auto EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA { 1 };
+    ASSERT_EQ(EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA, rawDelta.size());
+
+    // verify if line was removed from the file //
+    EXPECT_EQ(WIKIPEDIA_HASH, rawDelta[0].first);
+    EXPECT_EQ("", rawDelta[0].second);
+}
+
+// TODO: as described in delta.cpp this is not exactly an error cause now algorithm focuses on finding first matching
+//       chunks but it could be improved to search for more significant matches, or more precisely try to shrink the
+//       scope of the matching 'block' between two matching chunks, it should produce smaller output from --delta
+//       This test case should pass when this is improved.
+TEST_F(DeltaTestSuite, DISABLED_RepeatingAndFollowingLineRemovedTest)
+{
+    PrepareDataTestFile({ WIKIPEDIA_STR, SOME_TEXT_STR, LOREM_IPSUM_STR, WIKIPEDIA_STR, YET_ANOTHER_TEXT_STR });
+    PrepareSigTestFile({ WIKIPEDIA_HASH, SOME_TEXT_HASH, LOREM_IPSUM_HASH, WIKIPEDIA_HASH, YET_ANOTHER_TEXT_HASH });
+    // update data test file //
+    PrepareDataTestFile({ LOREM_IPSUM_STR, WIKIPEDIA_STR, YET_ANOTHER_TEXT_STR });
+
+    DeltaTesting delta { m_signatureTestFile, m_dataTestFile };
+    delta.Calculate();
+    EXPECT_TRUE(delta.IsChanged());
+
+    const auto& rawDelta { delta.GetRawDelta() };
+
+    constexpr auto EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA { 2 };
+    ASSERT_EQ(EXPECTED_NUMBER_OF_ENTRIES_IN_DELTA, rawDelta.size());
+
+    // verify if line was removed from the file //
+    EXPECT_EQ(WIKIPEDIA_HASH, rawDelta[0].first);
+    EXPECT_EQ("", rawDelta[0].second);
+    EXPECT_EQ(SOME_TEXT_HASH, rawDelta[1].first);
+    EXPECT_EQ("", rawDelta[1].second);
 }
 
 } // testing namespace

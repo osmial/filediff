@@ -1,6 +1,8 @@
 #### Build command:
 >conan install . --install-folder cmake-build-release --build=missing && cd cmake-build-release && cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release && cmake --build .
 
+NOTE: As it's seen in CMakeList.txt file C++ standard is set to C++20 and some features are being in use so to be able to compile the project you need to use at least g++10 or above.
+
 #### Example usage:
 
 signature calculation:
@@ -95,16 +97,16 @@ A
 4) Calculate the delta for updated file against signature:
 >./cmake-build-release/filediff --delta --sigfile C.sig --newdata C
 ```
+420042
+
+440044
+
 590059
 X
-440044
-C
 430043
 B
-430043
-
-440044
-
+420042
+A
 ```
 ###### Explanation:
-This example shows how delta for shufled file with new entry at the beginning will be calculated. First three entries are detected as new since first is actually new and remaining two were moved around the file, which is why for those entries additional empty output is generated (see example A's explanation for details).
+This example shows how delta for shufled file with new entry at the beginning will be calculated. At first two moved entries will be detected as removed and then new entry detected, and in the end two moved entries detected as new (moved).

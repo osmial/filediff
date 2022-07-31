@@ -69,6 +69,19 @@ void filediff::Delta::Calculate()
             continue;
         }
 
+        // TODO: checking here only next element after the one suspected that was removed but found in other place in
+        //       the file is not exactly perfect approach, what should be done here is to check if any of the elements
+        //       in range (oldHashes[i+1], oldHashes[value of it]] still persists new file (which meeans in range
+        //       [keepIt, it) in updatedFileMetadata), if so then 'it' should point to that matching element and all
+        //       preceding elements (from oldHashes) shall be considered as removed -> it's not a bug but it could be improved
+        auto iter = findMatchingHash(keepIt, std::cend(updatedFileMetadata), oldHashes[i + 1]);
+        if (std::distance(std::cbegin(updatedFileMetadata), iter) < std::distance(std::cbegin(updatedFileMetadata), it)) {
+            // this means 'it' should be considered as deleted and the fact it was found means there were more such chunks in the file
+            m_delta.emplace_back(oldHashes[i], "");
+            it = keepIt;
+            continue;
+        }
+
         matchingRangeMarkers.emplace_back(it);
         it++; // we don't want to fell into any weird loop in case of having few the same entries in a row
 

@@ -31,8 +31,7 @@ private:
 
     std::deque<LineMetadata> ParseDataFile(std::ifstream& ifs);
 
-    std::string_view
-        m_dataFileName; // this might be suspicious but the lifetime of orginal string is enough to not end up with dangling pointers.
+    std::string_view m_dataFileName; // this might be suspicious but the lifetime of orginal string is enough to not end up with dangling pointers.
     Signature m_baseSignature;
     std::deque<uint32_t> m_newHashes;
     std::deque<std::pair<uint32_t, std::string>> m_delta;
